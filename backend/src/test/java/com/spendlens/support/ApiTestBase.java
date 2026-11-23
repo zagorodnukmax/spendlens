@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "app.ai.api-key="
 })
 @AutoConfigureMockMvc
-public abstract class IntegrationTest {
+public abstract class ApiTestBase {
 
     @Autowired
     protected MockMvcTester mvc;

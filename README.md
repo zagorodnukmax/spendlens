@@ -16,10 +16,22 @@
 | AI       | Official [Anthropic Java SDK](https://github.com/anthropics/anthropic-java), model `claude-opus-5-5`, structured outputs |
 | Database | H2 (default, zero setup) or PostgreSQL (`postgres` profile + `docker-compose.yml`) |
 | Frontend | Angular 22 — standalone components, signals, zoneless, lazy routes |
-| Quality  | 46 backend + 27 frontend tests, GitHub Actions CI |
+| Quality  | 46 unit/API + 10 integration (real server) + 27 frontend tests, GitHub Actions CI |
 
 > Follow-up to [Spendwise](https://github.com/zagorodnukmax/spendwise), where categorization was keyword-only.
 > Here the same problem is solved with an LLM, and the keyword approach became the fallback.
+
+## Access (local)
+
+| What | URL | Login |
+|---|---|---|
+| **Web app** | http://localhost:4200 | `demo@spendlens.dev` / `demo12345` — or create your own account with *Register* |
+| REST API | http://localhost:8080/api | Bearer token from `POST /api/auth/login` (see [API](#api)) |
+| H2 database console | http://localhost:8080/h2-console | JDBC URL `jdbc:h2:file:./data/spendlens`, user `sa`, password empty |
+| PostgreSQL (optional) | `localhost:5432`, database `spendlens` | user `spendlens`, password `spendlens` (from `docker-compose.yml`) |
+
+The demo account is created on the first start with a preloaded sample monobank statement (55 transactions).
+These are local development credentials only.
 
 ## How it works
 
@@ -73,8 +85,7 @@ cd frontend
 npm install
 npm start
 ```
-Open http://localhost:4200 and log in as **`demo@spendlens.dev` / `demo12345`** (a sample monobank statement is
-preloaded). Sample files to upload are in [`samples/`](samples).
+Open http://localhost:4200 and log in as **`demo@spendlens.dev` / `demo12345`** (see [Access](#access-local)). Sample files to upload are in [`samples/`](samples).
 
 ### PostgreSQL instead of H2
 ```bash
@@ -83,10 +94,12 @@ cd backend && SPRING_PROFILES_ACTIVE=postgres ./mvnw spring-boot:run
 ```
 
 ### Tests
-```bash
-cd backend && ./mvnw test                   # 46 tests
-cd frontend && npx ng test --watch=false    # 27 tests
-```
+
+| Kind | Command | What runs |
+|---|---|---|
+| Unit + API (fast) | `cd backend && ./mvnw test` | 46 tests: parser, rules, insights, a fake Claude, the real SDK against a local HTTP stub, endpoints via MockMvc |
+| **Integration** | `cd backend && ./mvnw verify` | the above **+ 10 `*IT` tests**: the app starts on a random port; real multipart upload, async processing, polling, CORS, 413 for big files, demo account |
+| Frontend | `cd frontend && npx ng test --watch=false` | 27 tests: statement page polling, Ask AI, API, auth |
 
 ## Supported CSV formats
 

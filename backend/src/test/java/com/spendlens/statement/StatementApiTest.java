@@ -1,6 +1,6 @@
 package com.spendlens.statement;
 
-import com.spendlens.support.IntegrationTest;
+import com.spendlens.support.ApiTestBase;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class StatementIntegrationTest extends IntegrationTest {
+class StatementApiTest extends ApiTestBase {
 
     private static String sample() {
         try {

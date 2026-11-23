@@ -20,6 +20,10 @@ spring:
 
 server:
   port: 8080
+  tomcat:
+    # Read (and discard) oversized uploads up to this size so the client gets a clean 413 response
+    # instead of a dropped connection. Found by StatementFlowIT.
+    max-swallow-size: 10MB
 
 app:
   jwt:

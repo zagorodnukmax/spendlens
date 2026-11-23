@@ -3,7 +3,7 @@ package com.spendlens.statement;
 import com.spendlens.ai.CategoryAssignment;
 import com.spendlens.ai.ClaudeGateway;
 import com.spendlens.ai.TransactionInput;
-import com.spendlens.support.IntegrationTest;
+import com.spendlens.support.ApiTestBase;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -16,8 +16,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** With a fake Claude gateway in the context: AI categorization and Q&A work end to end over HTTP. */
-@Import(AskContextTest.FakeClaudeConfig.class)
-class AskContextTest extends IntegrationTest {
+@Import(AiApiTest.FakeClaudeConfig.class)
+class AiApiTest extends ApiTestBase {
 
     static final AtomicReference<String> lastContext = new AtomicReference<>();
 

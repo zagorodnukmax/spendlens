@@ -1,12 +1,12 @@
 package com.spendlens.auth;
 
-import com.spendlens.support.IntegrationTest;
+import com.spendlens.support.ApiTestBase;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AuthIntegrationTest extends IntegrationTest {
+class AuthApiTest extends ApiTestBase {
 
     @Test
     void registerLoginAndUseToken() {
