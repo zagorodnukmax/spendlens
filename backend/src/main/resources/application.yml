@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: spendlens
+  datasource:
+    url: jdbc:h2:file:./data/spendlens;AUTO_SERVER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    # Base64-encoded HMAC key (>= 256 bit). Override with APP_JWT_SECRET outside local development.
+    secret: ${APP_JWT_SECRET:c3BlbmRsZW5zLWRldi1zZWNyZXQta2V5LWNoYW5nZS1tZS1wbGVhc2UtMzJieXRlcyE=}
+    ttl: 8h
+    issuer: spendlens
+  cors:
+    allowed-origins: http://localhost:4200
+  seed-demo-data: true
+  ai:
+    # Claude is used only when ANTHROPIC_API_KEY is set; otherwise SpendLens falls back to MCC/keyword rules.
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: claude-opus-5-5
+    batch-size: 40
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/spendlens}
+    username: ${DB_USER:spendlens}
+    password: ${DB_PASSWORD:spendlens}
+  h2:
+    console:
+      enabled: false

@@ -1,0 +1,16 @@
+# Optional: run SpendLens on PostgreSQL instead of the default H2 file database.
+#   docker compose up -d
+#   cd backend && SPRING_PROFILES_ACTIVE=postgres ./mvnw spring-boot:run
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: spendlens
+      POSTGRES_USER: spendlens
+      POSTGRES_PASSWORD: spendlens
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

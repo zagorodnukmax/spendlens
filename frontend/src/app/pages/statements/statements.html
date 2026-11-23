@@ -1,0 +1,76 @@
+<section class="hero">
+  <div>
+    <h1>Your statements</h1>
+    <p class="muted">
+      Upload a CSV export from monobank (or any CSV with <code>date, description, amount</code>).
+      @if (ai(); as a) {
+        @if (a.enabled) {
+          <span class="badge ai">✨ Claude AI is on</span>
+        } @else {
+          <span class="badge" title="Set ANTHROPIC_API_KEY on the backend to enable Claude">⚙ Rules mode (AI off)</span>
+        }
+      }
+    </p>
+  </div>
+</section>
+
+<label
+  class="dropzone card"
+  [class.over]="dragOver()"
+  (drop)="onDrop($event)"
+  (dragover)="onDragOver($event)"
+  (dragleave)="dragOver.set(false)"
+>
+  <input type="file" accept=".csv,text/csv" (change)="onFileInput($event)" hidden />
+  @if (uploading()) {
+    <span class="spinner"></span>
+    <strong>Uploading…</strong>
+  } @else {
+    <span class="icon">📄</span>
+    <strong>Drop a CSV here or click to choose</strong>
+    <span class="muted small">
+      No file at hand? Try
+      <a href="samples/monobank-sample.csv" download (click)="$event.stopPropagation()">monobank sample</a> or
+      <a href="samples/generic-sample.csv" download (click)="$event.stopPropagation()">generic sample</a>.
+    </span>
+  }
+</label>
+
+@if (error(); as e) {
+  <p class="error">{{ e }}</p>
+}
+
+<section class="list">
+  @for (s of statements(); track s.id) {
+    <a class="card item" [routerLink]="['/statements', s.id]">
+      <div class="main">
+        <strong>{{ s.fileName }}</strong>
+        <span class="muted small">
+          {{ s.transactionCount }} transactions
+          @if (s.periodFrom) {
+            · {{ s.periodFrom | date: 'd MMM y' }} – {{ s.periodTo | date: 'd MMM y' }}
+          }
+          · {{ s.format === 'MONOBANK' ? 'monobank' : 'CSV' }}
+        </span>
+      </div>
+      @switch (s.status) {
+        @case ('PROCESSING') {
+          <span class="badge warn"><span class="spinner tiny"></span> Processing</span>
+        }
+        @case ('DONE') {
+          @if (s.aiCategorized > 0) {
+            <span class="badge ai">✨ {{ s.aiCategorized }} by AI</span>
+          } @else {
+            <span class="badge ok">Ready</span>
+          }
+        }
+        @case ('FAILED') {
+          <span class="badge bad">Failed</span>
+        }
+      }
+      <button class="danger" (click)="remove(s, $event)" aria-label="Delete">✕</button>
+    </a>
+  } @empty {
+    <p class="muted">No statements yet — upload your first one above.</p>
+  }
+</section>

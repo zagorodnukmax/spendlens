@@ -1,0 +1,203 @@
+<a routerLink="/" class="back muted">← All statements</a>
+
+@if (error(); as e) {
+  <p class="error">{{ e }}</p>
+}
+
+@if (statement(); as s) {
+  <header class="head">
+    <div>
+      <h1>{{ s.fileName }}</h1>
+      <p class="muted">
+        {{ s.transactionCount }} transactions
+        @if (s.periodFrom) {
+          · {{ s.periodFrom | date: 'd MMM y' }} – {{ s.periodTo | date: 'd MMM y' }}
+        }
+      </p>
+    </div>
+    @if (s.status === 'DONE') {
+      @if (s.aiCategorized > 0) {
+        <span class="badge ai">✨ {{ s.aiCategorized }} of {{ s.transactionCount }} categorized by Claude</span>
+      } @else {
+        <span class="badge">⚙ Categorized by rules</span>
+      }
+    }
+  </header>
+
+  @switch (s.status) {
+    @case ('PROCESSING') {
+      <div class="card processing">
+        <span class="spinner"></span>
+        <div>
+          <strong>Analyzing your statement…</strong>
+          <p class="muted">
+            {{ ai()?.enabled ? 'Claude is categorizing transactions.' : 'Categorizing transactions by MCC codes and keywords.' }}
+          </p>
+        </div>
+      </div>
+    }
+    @case ('FAILED') {
+      <div class="card"><p class="error">Processing failed: {{ s.error }}</p></div>
+    }
+  }
+}
+
+@if (insights(); as i) {
+  <section class="stats">
+    <div class="card stat">
+      <span class="muted">Income</span>
+      <strong class="income">{{ i.income | currency: 'UAH' : 'symbol-narrow' }}</strong>
+    </div>
+    <div class="card stat">
+      <span class="muted">Expenses</span>
+      <strong class="expense">{{ i.expenses | currency: 'UAH' : 'symbol-narrow' }}</strong>
+    </div>
+    <div class="card stat">
+      <span class="muted">Balance</span>
+      <strong [class.income]="i.balance >= 0" [class.expense]="i.balance < 0">
+        {{ i.balance | currency: 'UAH' : 'symbol-narrow' }}
+      </strong>
+    </div>
+  </section>
+
+  <section class="card ask">
+    <h3>✨ Ask about your spending</h3>
+    @if (ai()?.enabled) {
+      @for (qa of conversation(); track $index) {
+        <div class="qa">
+          <p class="q">{{ qa.question }}</p>
+          @if (qa.answer) {
+            <p class="a">{{ qa.answer }}</p>
+          } @else if (qa.error) {
+            <p class="error">{{ qa.error }}</p>
+          } @else {
+            <p class="a muted"><span class="spinner tiny"></span> Thinking…</p>
+          }
+        </div>
+      }
+      <form class="ask-row" (ngSubmit)="ask()">
+        <input
+          name="question"
+          [ngModel]="question()"
+          (ngModelChange)="question.set($event)"
+          placeholder="e.g. How much did I spend on taxis in October?"
+          maxlength="500"
+        />
+        <button type="submit" [disabled]="asking() || !question().trim()">Ask</button>
+      </form>
+      <div class="chips">
+        @for (sg of suggestions; track sg) {
+          <button type="button" class="chip" [disabled]="asking()" (click)="ask(sg)">{{ sg }}</button>
+        }
+      </div>
+    } @else {
+      <p class="muted">
+        Claude is not configured. Set <code>ANTHROPIC_API_KEY</code> for the backend and restart it to ask questions
+        and get AI categorization. Everything else on this page works without it.
+      </p>
+    }
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h3>Spending by category</h3>
+      @for (c of i.byCategory; track c.category) {
+        <div class="bar-row">
+          <div class="bar-label">
+            <span class="dot" [style.background]="c.color"></span>
+            <span>{{ c.label }}</span>
+            <span class="muted amount">{{ c.total | currency: 'UAH' : 'symbol-narrow' : '1.0-0' }} · {{ c.share | percent }}</span>
+          </div>
+          <div class="bar-track"><div class="bar" [style.width]="barWidth(c.total)" [style.background]="c.color"></div></div>
+        </div>
+      } @empty {
+        <p class="muted">No expenses.</p>
+      }
+    </section>
+
+    <div class="col">
+      <section class="card">
+        <h3>🔁 Subscriptions</h3>
+        @if (i.subscriptions.length) {
+          <div class="table-scroll"><table>
+            <tr><th>Merchant</th><th class="num">Monthly</th><th class="num">Per year</th></tr>
+            @for (sub of i.subscriptions; track sub.merchant) {
+              <tr>
+                <td>{{ sub.merchant }} <span class="muted small">×{{ sub.charges }}</span></td>
+                <td class="num">{{ sub.typicalAmount | currency: 'UAH' : 'symbol-narrow' : '1.0-0' }}</td>
+                <td class="num"><strong>{{ sub.yearlyCost | currency: 'UAH' : 'symbol-narrow' : '1.0-0' }}</strong></td>
+              </tr>
+            }
+          </table></div>
+        } @else {
+          <p class="muted">No recurring charges found (needs at least two charges).</p>
+        }
+      </section>
+
+      <section class="card">
+        <h3>⚠️ Unusual expenses</h3>
+        @for (a of i.anomalies; track a.transactionId) {
+          <div class="anomaly">
+            <div>
+              <strong>{{ a.description }}</strong>
+              <span class="muted small"> · {{ a.date | date: 'd MMM' }}</span>
+              <p class="muted small">{{ a.reason }}</p>
+            </div>
+            <strong class="expense">{{ a.amount | currency: 'UAH' : 'symbol-narrow' : '1.0-0' }}</strong>
+          </div>
+        } @empty {
+          <p class="muted">Nothing unusual. 👍</p>
+        }
+      </section>
+    </div>
+  </div>
+
+  @if (i.byMonth.length > 1) {
+    <section class="card">
+      <h3>By month</h3>
+      <div class="table-scroll"><table>
+        <tr><th>Month</th><th class="num">Income</th><th class="num">Expenses</th></tr>
+        @for (m of i.byMonth; track m.month) {
+          <tr>
+            <td>{{ m.month + '-01' | date: 'LLLL y' }}</td>
+            <td class="num income">{{ m.income | currency: 'UAH' : 'symbol-narrow' : '1.0-0' }}</td>
+            <td class="num expense">{{ m.expenses | currency: 'UAH' : 'symbol-narrow' : '1.0-0' }}</td>
+          </tr>
+        }
+      </table></div>
+    </section>
+  }
+
+  <section class="card">
+    <div class="tx-head">
+      <h3>Transactions</h3>
+      <select [ngModel]="filter()" (ngModelChange)="filter.set($event)" aria-label="Filter by category">
+        <option value="ALL">All categories</option>
+        @for (c of categories(); track c.value) {
+          <option [value]="c.value">{{ c.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="table-scroll"><table>
+      <tr><th>Date</th><th>Description</th><th>Category</th><th class="num">Amount</th></tr>
+      @for (t of visibleTransactions(); track t.id) {
+        <tr>
+          <td class="muted nowrap">{{ t.dateTime | date: 'd MMM' }}</td>
+          <td>{{ t.description }} @if (t.mcc) { <span class="muted small">MCC {{ t.mcc }}</span> }</td>
+          <td class="cat">
+            <span class="dot" [style.background]="t.categoryColor"></span>
+            <select [ngModel]="t.category" (ngModelChange)="recategorize(t, $event)" aria-label="Category">
+              @for (c of categories(); track c.value) {
+                <option [value]="c.value">{{ c.label }}</option>
+              }
+            </select>
+            <span class="src" [class.is-ai]="t.categorySource === 'AI'">{{ sourceLabel(t) }}</span>
+          </td>
+          <td class="num" [class.income]="t.amount > 0">
+            {{ t.amount | currency: 'UAH' : 'symbol-narrow' }}
+          </td>
+        </tr>
+      }
+    </table></div>
+  </section>
+}
