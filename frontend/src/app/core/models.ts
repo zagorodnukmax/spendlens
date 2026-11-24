@@ -84,3 +84,27 @@ export interface ApiProblem {
   detail?: string;
   errors?: Record<string, string>;
 }
+
+export type AuditStatus = 'RUNNING' | 'DONE' | 'FAILED';
+export type FindingType = 'MISCATEGORIZED' | 'DUPLICATE' | 'SUBSCRIPTION' | 'UNUSUAL_EXPENSE' | 'SAVING_TIP';
+
+export interface AuditFinding {
+  type: FindingType;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  title: string;
+  details: string;
+  transactionIds: number[];
+  suggestedCategory: string | null;
+}
+
+export interface AuditRun {
+  id: number;
+  status: AuditStatus;
+  startedAt: string;
+  finishedAt: string | null;
+  error: string | null;
+  steps: { tool: string; input: string; outcome: string; at: string }[];
+  report: { summary: string; findings: AuditFinding[]; complete: boolean } | null;
+  inputTokens: number;
+  outputTokens: number;
+}

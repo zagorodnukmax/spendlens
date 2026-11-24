@@ -7,16 +7,19 @@
 - finds **recurring subscriptions** and what they cost per year;
 - flags **unusual expenses** (e.g. "8.1× your typical Groceries expense");
 - shows spending **by category and by month**;
+- runs an **AI audit agent**: Claude decides on its own which tools to call (search transactions, find double
+  charges, check a merchant's history, …), checks its suspicions, and returns findings backed by transactions —
+  e.g. *"Taxi ride categorized as Other → Apply: Transport"*;
 - answers questions in plain language: *"How much did I spend on taxis in October?"*,
   *"Which subscriptions could I cancel?"* — in English or Ukrainian.
 
 | Layer    | Tech |
 |----------|------|
 | Backend  | Java 25, Spring Boot 4.2, Spring Security 7 (JWT **Bearer**), Spring Data JPA, `@Async` processing |
-| AI       | Official [Anthropic Java SDK](https://github.com/anthropics/anthropic-java), model `claude-opus-5-5`, structured outputs |
+| AI       | Official [Anthropic Java SDK](https://github.com/anthropics/anthropic-java), model `claude-opus-5-5`, structured outputs, **Tool Runner agent** |
 | Database | H2 (default, zero setup) or PostgreSQL (`postgres` profile + `docker-compose.yml`) |
 | Frontend | Angular 22 — standalone components, signals, zoneless, lazy routes |
-| Quality  | 46 unit/API + 10 integration (real server) + 27 frontend tests, GitHub Actions CI |
+| Quality  | 60 unit/API + 10 integration (real server) + 30 frontend tests, GitHub Actions CI |
 
 > Follow-up to [Spendwise](https://github.com/zagorodnukmax/spendwise), where categorization was keyword-only.
 > Here the same problem is solved with an LLM, and the keyword approach became the fallback.
@@ -56,6 +59,32 @@ Design decisions:
 - **Closed category list** (enum) → the model output is schema-validated and statistics stay comparable.
 - **Testable AI boundary.** All LLM calls go through the `ClaudeGateway` interface. Tests use a fake, plus one
   test that runs the real SDK client against a local HTTP stub to check the exact request we send.
+
+### The audit agent
+
+```
+POST /api/statements/{id}/audits ─▶ 202 RUNNING ─▶ @Async AuditExecutor
+                                                      │
+          ┌──────────── SDK Tool Runner loop (max 12 turns) ────────────┐
+          │ Claude ─▶ tool_use ─▶ our Java tool ─▶ tool_result ─▶ Claude │   each call saved as a step
+          └──────────────────────────────────────────────────────────────┘   → UI shows them live
+                                                      │
+                              submit_report ─▶ ids validated ─▶ DONE ─▶ "Apply" buttons in the UI
+```
+
+| Tool | What it returns |
+|---|---|
+| `get_overview` | period, totals, expenses by category, how many rows AI / rules / user categorized |
+| `search_transactions` | rows filtered by text, category, source, type, amount (max 50) |
+| `find_possible_duplicates` | same merchant + same amount within N days |
+| `get_merchant_history` | all charges of a merchant and the days between them |
+| `list_recurring_charges` | detected subscriptions + other repeated merchants |
+| `submit_report` | ends the run: summary + findings with transaction ids and suggested categories |
+
+- **Read-only tools, human applies changes.** The agent can only *suggest* a category; the user clicks *Apply*.
+- **Scoped data.** Tools are bound to one statement on the server; the model never passes a statement or user id.
+- **No made-up references.** Transaction ids in the report are checked against the statement; unknown ids are dropped.
+- **Bounded.** At most 12 model turns; if the model stops without `submit_report`, the run ends as an incomplete report.
 
 More detail (in Russian): [LOGIC.md](LOGIC.md).
 
@@ -97,9 +126,9 @@ cd backend && SPRING_PROFILES_ACTIVE=postgres ./mvnw spring-boot:run
 
 | Kind | Command | What runs |
 |---|---|---|
-| Unit + API (fast) | `cd backend && ./mvnw test` | 46 tests: parser, rules, insights, a fake Claude, the real SDK against a local HTTP stub, endpoints via MockMvc |
+| Unit + API (fast) | `cd backend && ./mvnw test` | 60 tests: parser, rules, insights, agent tools, **the agent loop driven through a scripted local stub of the Messages API**, endpoints via MockMvc |
 | **Integration** | `cd backend && ./mvnw verify` | the above **+ 10 `*IT` tests**: the app starts on a random port; real multipart upload, async processing, polling, CORS, 413 for big files, demo account |
-| Frontend | `cd frontend && npx ng test --watch=false` | 27 tests: statement page polling, Ask AI, API, auth |
+| Frontend | `cd frontend && npx ng test --watch=false` | 30 tests: statement page polling, audit panel (live steps, Apply), Ask AI, API, auth |
 
 ## Supported CSV formats
 
@@ -119,6 +148,8 @@ All endpoints except `/api/auth/**` require `Authorization: Bearer <token>`.
 | GET | `/api/statements/{id}/transactions` | Categorized transactions |
 | PATCH | `/api/statements/{id}/transactions/{txId}` | Correct a category |
 | GET | `/api/statements/{id}/insights` | Totals, categories, months, subscriptions, anomalies |
+| POST | `/api/statements/{id}/audits` | Start the audit agent → `202 RUNNING` (503 if AI is off) |
+| GET | `/api/statements/{id}/audits/latest` | Steps so far and, when done, the report |
 | POST | `/api/statements/{id}/ask` | `{ "question": "..." }` → answer from Claude (503 if AI is off) |
 | DELETE | `/api/statements/{id}` | Delete |
 | GET | `/api/ai/status`, `/api/categories` | AI on/off, category list |

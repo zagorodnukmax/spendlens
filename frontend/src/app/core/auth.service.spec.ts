@@ -73,7 +73,10 @@ describe('AuthService', () => {
       'spendlens.session',
       JSON.stringify({ token: 'old', expiresAt: new Date(Date.now() - 1000).toISOString(), user: { id: 1 } }),
     );
-    expect(setup().isAuthenticated()).toBe(false);
+    const auth = setup();
+    expect(auth.isAuthenticated()).toBe(false);
+    expect(auth.user()).toBeNull(); // the header must not show a user
+    expect(localStorage.getItem('spendlens.session')).toBeNull();
   });
 
   it('ignores corrupted localStorage data', () => {

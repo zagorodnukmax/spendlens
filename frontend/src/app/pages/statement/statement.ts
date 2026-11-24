@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin, switchMap, takeWhile, timer } from 'rxjs';
 import { ApiService } from '../../core/api.service';
+import { AuditPanel } from './audit/audit-panel';
 import { errorMessage } from '../../core/errors';
 import {
   AiStatus,
@@ -22,7 +23,7 @@ interface QA {
 
 @Component({
   selector: 'app-statement',
-  imports: [RouterLink, FormsModule, CurrencyPipe, DatePipe, PercentPipe],
+  imports: [RouterLink, FormsModule, CurrencyPipe, DatePipe, PercentPipe, AuditPanel],
   templateUrl: './statement.html',
   styleUrl: './statement.css',
 })
@@ -60,6 +61,8 @@ export class StatementPage implements OnInit {
   protected readonly maxCategoryTotal = computed(() =>
     Math.max(1, ...(this.insights()?.byCategory.map((c) => c.total) ?? [])),
   );
+
+  protected readonly statementId = computed(() => Number(this.id()));
 
   ngOnInit(): void {
     const id = Number(this.id());

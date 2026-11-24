@@ -57,10 +57,13 @@ class StatementFlowIT extends StatementItSupport {
         List<String> after = get("/api/statements/" + id + "/insights", token).json("$.byCategory[*].category");
         assertThat(after).contains("ENTERTAINMENT").doesNotContain("OTHER");
 
-        // 5. Ask needs AI → clear 503 in rules mode
+        // 5. Ask and Audit need AI → clear 503 in rules mode
         var ask = json("POST", "/api/statements/" + id + "/ask", token, "{\"question\":\"How much on food?\"}");
         assertThat(ask.status()).isEqualTo(503);
         assertThat(ask.body()).contains("ANTHROPIC_API_KEY");
+        var audit = json("POST", "/api/statements/" + id + "/audits", token, "");
+        assertThat(audit.status()).isEqualTo(503);
+        assertThat(get("/api/statements/" + id + "/audits/latest", token).status()).isEqualTo(404);
 
         // 6. Delete
         assertThat(delete("/api/statements/" + id, token).status()).isEqualTo(204);

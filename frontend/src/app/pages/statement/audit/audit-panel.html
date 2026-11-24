@@ -1,0 +1,81 @@
+<section class="card audit">
+  <div class="head">
+    <div>
+      <h3>🕵️ AI audit</h3>
+      <p class="muted small">
+        An agent looks through the statement on its own: it checks categories, double charges, subscriptions and
+        unusual expenses, and backs every finding with transactions.
+      </p>
+    </div>
+    @if (aiEnabled()) {
+      <button (click)="start()" [disabled]="running()">
+        {{ running() ? 'Auditing…' : run() ? 'Run again' : 'Run audit' }}
+      </button>
+    }
+  </div>
+
+  @if (!aiEnabled()) {
+    <p class="muted">Needs Claude: set <code>ANTHROPIC_API_KEY</code> for the backend and restart it.</p>
+  }
+
+  @if (error(); as e) {
+    <p class="error">{{ e }}</p>
+  }
+
+  @if (run(); as r) {
+    @if (r.steps.length || r.status === 'RUNNING') {
+      <ol class="steps">
+        @for (s of r.steps; track $index) {
+          <li>
+            <span class="icon">{{ toolIcons[s.tool] ?? '🔧' }}</span>
+            <code>{{ s.tool }}</code>
+            @if (s.input) {
+              <span class="muted input">{{ s.input }}</span>
+            }
+            <span class="outcome">→ {{ s.outcome }}</span>
+          </li>
+        }
+        @if (r.status === 'RUNNING') {
+          <li class="muted"><span class="spinner tiny"></span> thinking…</li>
+        }
+      </ol>
+    }
+
+    @if (r.status === 'FAILED') {
+      <p class="error">The audit failed: {{ r.error }}</p>
+    }
+
+    @if (r.report; as report) {
+      <p class="summary">{{ report.summary }}</p>
+      @if (!report.complete) {
+        <p class="muted small">The agent stopped before submitting a full report.</p>
+      }
+      @for (f of report.findings; track $index) {
+        <article class="finding" [class]="'sev-' + f.severity">
+          <header>
+            <span class="badge">{{ typeLabels[f.type] ?? f.type }}</span>
+            <strong>{{ f.title }}</strong>
+          </header>
+          <p>{{ f.details }}</p>
+          @for (t of transactionsOf(f); track t.id) {
+            <div class="tx">
+              <span class="muted">{{ t.dateTime.slice(0, 10) }}</span>
+              <span class="desc">{{ t.description }}</span>
+              <span class="num">{{ t.amount | currency: 'UAH' : 'symbol-narrow' }}</span>
+              @if (needsFix(f, t)) {
+                <button class="apply" (click)="applyCategory.emit({ transaction: t, category: f.suggestedCategory! })">
+                  Apply: {{ categoryLabel(f.suggestedCategory) }}
+                </button>
+              } @else if (f.suggestedCategory) {
+                <span class="badge ok">✓ {{ categoryLabel(t.category) }}</span>
+              }
+            </div>
+          }
+        </article>
+      } @empty {
+        <p class="muted">No findings — the statement looks clean. 👍</p>
+      }
+      <p class="muted tiny-text">{{ r.inputTokens + r.outputTokens }} tokens · {{ r.steps.length }} steps</p>
+    }
+  }
+</section>

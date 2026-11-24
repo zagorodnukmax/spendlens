@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   AiStatus,
+  AuditRun,
   AskResponse,
   CategoryInfo,
   Insights,
@@ -45,5 +46,11 @@ export class ApiService {
   }
   categories(): Observable<CategoryInfo[]> {
     return this.http.get<CategoryInfo[]>('/api/categories');
+  }
+  startAudit(id: number): Observable<AuditRun> {
+    return this.http.post<AuditRun>(`/api/statements/${id}/audits`, {});
+  }
+  latestAudit(id: number): Observable<AuditRun> {
+    return this.http.get<AuditRun>(`/api/statements/${id}/audits/latest`);
   }
 }

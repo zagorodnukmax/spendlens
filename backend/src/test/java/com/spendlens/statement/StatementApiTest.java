@@ -102,6 +102,15 @@ class StatementApiTest extends ApiTestBase {
     }
 
     @Test
+    void auditReturns503WhenAiIsNotConfigured() {
+        String token = registerUser();
+        long id = uploadAndWait(token, "date,description,amount\n2026-11-01,Coffee,-50\n");
+        var audit = postJson("/api/statements/" + id + "/audits", token, "");
+        assertThat(audit).hasStatus(503);
+        assertThat(audit).bodyJson().extractingPath("$.detail").asString().contains("ANTHROPIC_API_KEY");
+    }
+
+    @Test
     void endpointsRequireBearerToken() {
         assertThat(get("/api/statements", null)).hasStatus(401);
         assertThat(get("/api/statements", "garbage")).hasStatus(401);

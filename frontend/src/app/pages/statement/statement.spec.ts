@@ -45,6 +45,8 @@ describe('StatementPage', () => {
       categories: vi.fn(() => of([])),
       aiStatus: vi.fn(() => of({ enabled: aiEnabled, model: aiEnabled ? 'claude-opus-5-5' : null })),
       ask: vi.fn(),
+      latestAudit: vi.fn(() => throwError(() => new HttpErrorResponse({ status: 404 }))),
+      startAudit: vi.fn(),
       recategorize: vi.fn(),
     };
     await TestBed.configureTestingModule({

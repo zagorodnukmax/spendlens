@@ -138,7 +138,7 @@ public class InsightsService {
     // ---- helpers ----
 
     /** Normalizes a bank description to a merchant key: lower case, no digits/punctuation, single spaces. */
-    static String merchantKey(String description) {
+    public static String merchantKey(String description) {
         return description.toLowerCase(Locale.ROOT)
                 .replaceAll("[0-9*#№]+", " ")
                 .replaceAll("[^\\p{L} ]+", " ")

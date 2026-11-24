@@ -98,6 +98,14 @@
     }
   </section>
 
+  <app-audit-panel
+    [statementId]="statementId()"
+    [aiEnabled]="!!ai()?.enabled"
+    [transactions]="transactions()"
+    [categories]="categories()"
+    (applyCategory)="recategorize($event.transaction, $event.category)"
+  />
+
   <div class="grid">
     <section class="card">
       <h3>Spending by category</h3>

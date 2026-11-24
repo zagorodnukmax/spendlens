@@ -1,6 +1,8 @@
 package com.spendlens.statement;
 
 import com.spendlens.ai.ClaudeGateway;
+import com.spendlens.audit.AuditRunRepository;
+import com.spendlens.audit.AuditStepRepository;
 import com.spendlens.common.AiUnavailableException;
 import com.spendlens.common.BadRequestException;
 import com.spendlens.common.ConflictException;
@@ -31,10 +33,13 @@ public class StatementService {
     private final ApplicationEventPublisher events;
     private final Optional<ClaudeGateway> claude;
     private final AppProperties props;
+    private final AuditRunRepository auditRuns;
+    private final AuditStepRepository auditSteps;
 
     public StatementService(StatementRepository statements, StatementTransactionRepository transactions,
                             UserRepository users, StatementParser parser, InsightsService insightsService,
-                            ApplicationEventPublisher events, Optional<ClaudeGateway> claude, AppProperties props) {
+                            ApplicationEventPublisher events, Optional<ClaudeGateway> claude, AppProperties props,
+                            AuditRunRepository auditRuns, AuditStepRepository auditSteps) {
         this.statements = statements;
         this.transactions = transactions;
         this.users = users;
@@ -43,6 +48,8 @@ public class StatementService {
         this.events = events;
         this.claude = claude;
         this.props = props;
+        this.auditRuns = auditRuns;
+        this.auditSteps = auditSteps;
     }
 
     /** Parses and stores the file, then hands it to {@link StatementProcessor} for background categorization. */
@@ -99,6 +106,8 @@ public class StatementService {
     @Transactional
     public void delete(Long userId, Long id) {
         var statement = find(userId, id);
+        auditSteps.deleteByStatementId(statement.getId());
+        auditRuns.deleteByStatementId(statement.getId());
         transactions.deleteByStatementId(statement.getId());
         statements.delete(statement);
     }
