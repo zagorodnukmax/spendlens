@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  */
 public class AuditTools {
 
-    static final int MAX_RESULTS = 50;
+    static final int MAX_RESULTS = 100;
 
     private final List<StatementTransaction> items;
     private final InsightsService insights;

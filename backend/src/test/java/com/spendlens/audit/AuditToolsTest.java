@@ -35,15 +35,15 @@ class AuditToolsTest {
     }
 
     @Test
-    void searchIsCappedAtFiftyRows() {
+    void searchIsCappedAtHundredRows() {
         var many = new java.util.ArrayList<com.spendlens.statement.StatementTransaction>();
-        for (int i = 0; i < 80; i++) {
+        for (int i = 0; i < 150; i++) {
             many.add(AuditFixtures.tx(i, "2026-11-01", "Coffee " + i, null, "-50", Category.RESTAURANTS,
                     CategorySource.AI));
         }
         var result = new AuditTools(many, new InsightsService()).search(null, null, null, null, null, null, 500);
-        assertThat(result.totalMatches()).isEqualTo(80);
-        assertThat(result.returned()).isEqualTo(50);
+        assertThat(result.totalMatches()).isEqualTo(150);
+        assertThat(result.returned()).isEqualTo(100);
     }
 
     @Test

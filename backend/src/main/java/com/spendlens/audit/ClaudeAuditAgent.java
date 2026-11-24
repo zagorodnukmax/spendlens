@@ -59,6 +59,8 @@ public class ClaudeAuditAgent implements AuditAgent {
 
             How to work:
             - Start with get_overview. Then use the other tools to check each suspicion before reporting it.
+            - To review categories, call search_transactions ONCE without filters (limit 100) and read all rows,
+              instead of searching category by category. Leave filters you do not need as null.
             - Never invent transaction ids or numbers; use only what the tools returned.
             - Be efficient: about 4-8 tool calls are usually enough.
             - Report at most 8 findings, most important first. Skip weak or speculative ones.
@@ -87,7 +89,8 @@ public class ClaudeAuditAgent implements AuditAgent {
     }
 
     @JsonClassDescription("Search transactions with optional filters. Use it to inspect a category (e.g. OTHER), "
-            + "a merchant, large amounts, or rule-categorized items. Returns at most 50 rows with their ids.")
+            + "a merchant, large amounts, or rule-categorized items. Without filters it returns every transaction "
+            + "(up to 100 rows), which is the fastest way to review all categories at once.")
     public static class SearchTransactions {
         @JsonPropertyDescription("Case-insensitive text that must appear in the description")
         public Optional<String> text = Optional.empty();
@@ -103,7 +106,7 @@ public class ClaudeAuditAgent implements AuditAgent {
         @JsonProperty("max_amount")
         @JsonPropertyDescription("Maximum absolute amount in UAH")
         public Optional<BigDecimal> maxAmount = Optional.empty();
-        @JsonPropertyDescription("Max rows to return (default 30, max 50)")
+        @JsonPropertyDescription("Max rows to return (default 30, max 100)")
         public Optional<Integer> limit = Optional.empty();
     }
 
@@ -243,7 +246,9 @@ public class ClaudeAuditAgent implements AuditAgent {
     private String describe(Object params) {
         try {
             String s = json.writeValueAsString(params);
-            return "{}".equals(s) ? "" : s.replaceAll("\"[a-z_]+\":null,?", "").replace(",}", "}");
+            // Show only the filters the model actually used: drop nulls and empty strings.
+            String shown = s.replaceAll("\"[a-z_]+\":(null|\"\"),?", "").replace(",}", "}");
+            return "{}".equals(shown) ? "" : shown;
         } catch (Exception e) {
             return "";
         }

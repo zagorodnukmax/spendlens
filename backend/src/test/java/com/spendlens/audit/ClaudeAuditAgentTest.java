@@ -53,7 +53,7 @@ class ClaudeAuditAgentTest {
     void multiStepAuditEndsWithValidatedReport() {
         api.then(toolUse("t1", "get_overview", "{}"))
            .then(toolUse("t2", "search_transactions",
-                   "{\"category\":\"OTHER\",\"text\":null,\"source\":null,\"type\":null,"
+                   "{\"category\":\"OTHER\",\"text\":\"\",\"source\":null,\"type\":null,"
                    + "\"min_amount\":null,\"max_amount\":null,\"limit\":null}"))
            .then(message("""
                    [{"type":"tool_use","id":"t3","name":"find_possible_duplicates","input":{"max_days_apart":2}},
@@ -85,7 +85,7 @@ class ClaudeAuditAgentTest {
         // steps were reported as they happened
         assertThat(steps).extracting(AuditStepInfo::tool).containsExactly("get_overview", "search_transactions",
                 "find_possible_duplicates", "list_recurring_charges", "submit_report");
-        assertThat(steps.get(1).input()).contains("OTHER").doesNotContain("null");
+        assertThat(steps.get(1).input()).isEqualTo("{\"category\":\"OTHER\"}");
         assertThat(steps.get(1).outcome()).isEqualTo("1 matches");
         assertThat(steps.get(2).outcome()).isEqualTo("1 groups");
 
